@@ -22,15 +22,16 @@ export default class QRLoginServer {
         );
 
         this.socket.on("open", (event) => {
-            // console.log("Remote auth gateway connected.");
+            console.log("[QR] Remote auth gateway connected.");
         });
 
         this.socket.on("message", async (event: Buffer) => {
-            const msg = JSON.parse(event.toString());
+            try {
+                const msg = JSON.parse(event.toString());
 
-            // console.log("Remote auth gateway sent: ", msg);
+                console.log("[QR] Remote auth gateway sent op:", msg.op);
 
-            switch (msg.op) {
+                switch (msg.op) {
                 case "hello": {
                     this.keyPair = await crypto.subtle.generateKey(
                         {
@@ -51,7 +52,7 @@ export default class QRLoginServer {
                     }, msg.heartbeat_interval);
 
                     this.disconnectTimeout = setTimeout(() => {
-                        // console.log("Remote auth gateway timed out.");
+                        console.log("[QR] Remote auth gateway timed out.");
 
                         this.close(4003, "Handshake Timeout");
                     }, msg.timeout_ms);
@@ -75,7 +76,7 @@ export default class QRLoginServer {
                 }
 
                 case "pending_remote_init": {
-                    // console.log(`Remote auth gateway sent pending remote init: '${msg.fingerprint}'`);
+                    console.log(`[QR] Remote auth gateway sent pending remote init: '${msg.fingerprint}'`);
 
                     this.sendToClient({
                         t: "qrlogin_code",
@@ -87,11 +88,12 @@ export default class QRLoginServer {
                 case "pending_ticket": {
                     const userInfo = await this.decryptBase64(msg.encrypted_user_payload);
 
-                    // console.log(`Remote auth gateway sent pending login for '${userInfo}'`);
+                    console.log(`[QR] Remote auth gateway sent pending login for '${userInfo}'`);
                     break;
                 }
 
                 case "pending_login": {
+                    console.log("[QR] Attempting login with ticket");
                     const response = await axios.post(
                         "https://discord.com/api/v9/users/@me/remote-auth/login",
                         {ticket: msg.ticket}
@@ -99,7 +101,7 @@ export default class QRLoginServer {
                     
                     const token = await this.decryptBase64(response.data.encrypted_token);
 
-                    // console.log(`Got token '${token}'`);
+                    console.log(`[QR] Got token successfully`);
 
                     this.sendToClient({
                         t: "qrlogin_token",
@@ -119,20 +121,24 @@ export default class QRLoginServer {
                 }
 
                 default: {
-                    // console.log(`Remote auth gateway sent unknown opcode: '${msg.op}'`);
+                    console.log(`[QR] Remote auth gateway sent unknown opcode: '${msg.op}', data:`, msg);
                     break;
                 }
             }
+        } catch (err) {
+            console.error("[QR] Error processing message:", err);
+            this.sendToClient({t: "qrlogin_disconnect"});
+        }
         });
 
         this.socket.on("error", (event) => {
-            console.log("Error occurred with remote auth gateway connection.");
-            console.log(event);
+            console.log("[QR] Error occurred with remote auth gateway connection.");
+            console.error(event);
         });
 
         this.socket.on("close", (event: any) => {
-            // console.log("Remote auth gateway disconnected.");
-            // console.log(`code ${event.code}, reason '${event.reason}'`);
+            console.log("[QR] Remote auth gateway disconnected.");
+            console.log(`[QR] code ${event.code}, reason '${event.reason}'`);
 
             if (this.heartbeatInterval) {
                 clearInterval(this.heartbeatInterval);
