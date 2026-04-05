@@ -14,7 +14,7 @@ const NEW_LINE = "\n".charCodeAt(0);
 const superProps = {
     "os": "Android",
     "browser": "Discord Android",
-    "device": "a20e", // Samsung Galaxy A20e
+    "device": "t2s", // Samsung Galaxy S21+
     "system_locale": "en-US",
     "has_client_mods": false,
     "client_version": "262.5 - rn",
@@ -34,7 +34,7 @@ const defaultHeaders = {
     "User-Agent": "Discord-Android/262205;RNA",
     "X-Super-Properties": btoa(JSON.stringify(superProps)),
     "X-Discord-Locale": "en-US",
-    "X-Discord-Timezone": "Europe/Kyiv",
+    "X-Discord-Timezone": "Australia/Perth",
 
     // these I'm not sure about
     "Accept": "*/*",
